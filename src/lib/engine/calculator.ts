@@ -596,3 +596,24 @@ export function computeTrackerSnapshot(
     alerts,
   };
 }
+
+/**
+ * What the member pays for one more bill, given the deductible and out-of-pocket
+ * room left in the tracker:
+ *
+ *   share = min(oopRemaining, min(bill, deductibleRemaining)
+ *                             + max(0, bill - deductibleRemaining) x coinsurance)
+ */
+export function estimateMemberShare(
+  plan: Pick<HealthPlan, "coinsuranceRate">,
+  snapshot: Pick<TrackerSnapshot, "deductibleRemaining" | "oopRemaining">,
+  billAmount: number,
+): number {
+  const bill = Math.max(0, billAmount);
+  const toDeductible = Math.min(bill, snapshot.deductibleRemaining);
+  const coinsurance =
+    Math.max(0, bill - snapshot.deductibleRemaining) * plan.coinsuranceRate;
+  return roundCents(
+    Math.min(snapshot.oopRemaining, toDeductible + coinsurance),
+  );
+}

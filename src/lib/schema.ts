@@ -256,3 +256,29 @@ export const RetentionStateSchema = z.object({
   demoMonthOffset: z.number().int().min(0).max(12).default(0),
 });
 export type RetentionState = z.infer<typeof RetentionStateSchema>;
+
+// ---------------------------------------------------------------------------
+// App persistence (one localStorage key) and summary API
+// ---------------------------------------------------------------------------
+
+/** Everything the browser saves. Validated on load; anything invalid is dropped. */
+export const PersistedAppSchema = z.object({
+  version: z.literal(1),
+  /** True after Stripe test checkout or the Judge Demo Unlock. */
+  unlocked: z.boolean(),
+  /** Sample persona id, or "custom" once the user edits or picks their own numbers. */
+  personaId: z.string().min(1),
+  input: UserInputSchema,
+  /** Post-enrollment tracker; null until the user starts it. */
+  retention: RetentionStateSchema.nullable(),
+});
+export type PersistedApp = z.infer<typeof PersistedAppSchema>;
+
+export const SummaryBulletsSchema = z.array(z.string().min(1).max(600)).length(3);
+
+export const SummaryResponseSchema = z.object({
+  /** "llm" when a model wrote the wording, "template" for the deterministic fallback. */
+  source: z.enum(["llm", "template"]),
+  bullets: SummaryBulletsSchema,
+});
+export type SummaryResponse = z.infer<typeof SummaryResponseSchema>;

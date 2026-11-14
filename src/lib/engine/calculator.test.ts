@@ -11,6 +11,7 @@ import {
   calculateTaxSavings,
   comparePlans,
   computeTrackerSnapshot,
+  estimateMemberShare,
   findBreakevenAllowedCharges,
   getPayrollTaxRates,
   isHsaQualified,
@@ -606,5 +607,39 @@ describe("retention tracker", () => {
     expect(addMonths("2027-01-31", 1)).toBe("2027-02-28");
     expect(addMonths("2027-03-15", 6)).toBe("2027-09-15");
     expect(addMonths("2027-11-15", 2)).toBe("2028-01-15");
+  });
+});
+
+describe("estimateMemberShare", () => {
+  // HDHP-like terms: 20% coinsurance. Deductible has $1,500 left, OOP has $4,000 left.
+  const room = { deductibleRemaining: 1_500, oopRemaining: 4_000 };
+  const plan = { coinsuranceRate: 0.2 };
+
+  it("charges the full bill while it fits inside the remaining deductible", () => {
+    // bill $1,000 <= $1,500 left -> member pays $1,000
+    expect(estimateMemberShare(plan, room, 1_000)).toBe(1_000);
+  });
+
+  it("switches to coinsurance after the deductible", () => {
+    // $1,500 + (2,000 - 1,500) x 0.2 = 1,500 + 100 = 1,600
+    expect(estimateMemberShare(plan, room, 2_000)).toBe(1_600);
+  });
+
+  it("caps the member share at the remaining out-of-pocket room", () => {
+    // 1,500 + (50,000 - 1,500) x 0.2 = 11,200 -> capped at 4,000
+    expect(estimateMemberShare(plan, room, 50_000)).toBe(4_000);
+  });
+
+  it("charges only coinsurance once the deductible is met", () => {
+    // deductible met: 1,000 x 0.2 = 200
+    expect(
+      estimateMemberShare(plan, { deductibleRemaining: 0, oopRemaining: 3_000 }, 1_000),
+    ).toBe(200);
+  });
+
+  it("charges nothing once the out-of-pocket maximum is reached", () => {
+    expect(
+      estimateMemberShare(plan, { deductibleRemaining: 0, oopRemaining: 0 }, 1_000),
+    ).toBe(0);
   });
 });
