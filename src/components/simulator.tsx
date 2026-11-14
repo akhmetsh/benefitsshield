@@ -8,11 +8,12 @@ import { Paywall } from "@/components/paywall";
 import { LossVsSaved } from "@/components/loss-vs-saved";
 import { PlanReport } from "@/components/plan-report";
 import { ResultsPanel } from "@/components/results-panel";
-import { comparePlans } from "@/lib/engine/calculator";
+import { auditBill, comparePlans, getTierTerms } from "@/lib/engine/calculator";
 import { usd } from "@/lib/format";
 import { templateSummary } from "@/lib/llm/fallback";
 import { OFFER_DURATION_MS, formatPrice } from "@/lib/pricing";
 import { SAMPLE_PERSONAS } from "@/lib/personas";
+import { HOSPITAL_BILL, HOSPITAL_DEMAND, billTotal } from "@/lib/sample-bills";
 import {
   SummaryResponseSchema,
   UserInputSchema,
@@ -85,6 +86,16 @@ function useBrief(result: CalculationResult | null) {
   if (llm && llm.key === key) return { bullets: llm.bullets, source: "llm" as const };
   return { bullets: template ?? [], source: "template" as const };
 }
+
+function scrollToId(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+const JOURNEY = [
+  { n: 1, title: "Compare 2027 Plans", badge: "Free", body: "Exact net cost, employer seed & tax shield", target: "compare" },
+  { n: 2, title: "Audit Hospital Bills", badge: "Pro", body: "Catch EOB overcharges & copy dispute scripts", target: "shield" },
+  { n: 3, title: "Year-Round Copilot", badge: "Pro", body: "26-paycheck HR setup & FSA deadline alerts", target: "shield" },
+] as const;
 
 export function Simulator() {
   const [personaId, setPersonaId] = useState(DEFAULT_PERSONA.id);
@@ -203,30 +214,81 @@ export function Simulator() {
 
   const tier: PlanTier = purchase?.tier ?? "annual";
 
+  // "Real catch" example for the paywall: the overcharged hospital sample, audited on the recommended plan.
+  const previewPlan = result ? (input.plans.find((p) => p.id === result.recommendedPlanId) ?? input.plans[0]) : null;
+  const catchPreview = previewPlan
+    ? auditBill(previewPlan, input.coverageTier, {
+        billedAmount: billTotal(HOSPITAL_BILL),
+        ytdPaid: getTierTerms(previewPlan, input.coverageTier).deductible,
+        demandedAmount: HOSPITAL_DEMAND,
+      })
+    : null;
+
   return (
     <div className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 lg:pb-12">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span aria-hidden className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-700 text-lg text-white">🛡</span>
-          <span className="text-lg font-bold tracking-tight text-slate-900">BenefitsShield</span>
+      <header className="sticky top-0 z-20 -mx-4 border-b border-slate-200 bg-[#f6f8fb]/90 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span aria-hidden className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-700 text-lg text-white">🛡</span>
+            <span className="text-lg font-bold tracking-tight text-slate-900">BenefitsShield</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-bold tracking-wide ${persona ? "bg-amber-100 text-amber-900" : "bg-sky-100 text-sky-900"}`}
+            >
+              {persona ? "SAMPLE US 2027 PLAN DATA" : "YOUR NUMBERS · US 2027 RULES"}
+            </span>
+            <button
+              type="button"
+              onClick={() => scrollToId("shield")}
+              className="rounded-full bg-emerald-700 px-3 py-1 text-xs font-bold text-white shadow-sm hover:bg-emerald-800 focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-600/30"
+            >
+              🛡️ Bill Overcharge Shield
+            </button>
+            {unlocked && (
+              <button
+                type="button"
+                onClick={lockDemo}
+                className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:border-slate-500 focus:outline-none focus-visible:ring-4 focus-visible:ring-slate-300/50"
+              >
+                Lock Demo
+              </button>
+            )}
+          </div>
         </div>
-        <span
-          className={`rounded-full px-3 py-1 text-xs font-bold tracking-wide ${persona ? "bg-amber-100 text-amber-900" : "bg-sky-100 text-sky-900"}`}
-        >
-          {persona ? "SAMPLE US 2027 PLAN DATA" : "YOUR NUMBERS · US 2027 RULES"}
-        </span>
       </header>
 
       <section className="mt-6">
-        <h1 className="max-w-3xl text-3xl font-bold leading-tight tracking-tight text-slate-900 sm:text-4xl">
-          HDHP + HSA or PPO? See which one really costs you less in 2027.
+        <h1 className="max-w-4xl text-3xl font-bold leading-tight tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
+          Pick the Cheapest 2027 Health Plan for Free. Catch Hospital Overcharges All Year.
         </h1>
-        <p className="mt-2 max-w-2xl text-slate-600">
-          Premiums, expected care, employer HSA money and tax savings, netted out in dollars. No login. Change any number and the answer updates instantly.
+        <p className="mt-3 max-w-3xl text-base text-slate-600 sm:text-lg">
+          Compare HDHP + HSA vs. PPO using exact 2027 IRS math—then audit hospital bills for billing errors and protect expiring FSA funds.
         </p>
         <p className="mt-3 max-w-3xl text-xs text-slate-500">
           Educational estimates only. Not insurance, tax, medical or legal advice. BenefitsShield does not sell insurance.
         </p>
+
+        <ol className="mt-5 grid gap-2 sm:grid-cols-3" aria-label="Your journey">
+          {JOURNEY.map((step) => (
+            <li key={step.n}>
+              <button
+                type="button"
+                onClick={() => scrollToId(step.target)}
+                className={`flex h-full w-full items-start gap-3 rounded-2xl border p-3 text-left transition hover:shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-600/25 ${step.badge === "Free" ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-white hover:border-emerald-500"}`}
+              >
+                <span aria-hidden className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-sm font-bold ${step.badge === "Free" ? "bg-emerald-700 text-white" : "bg-slate-900 text-white"}`}>{step.n}</span>
+                <span className="min-w-0">
+                  <span className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-900">
+                    {step.n}. {step.title}
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${step.badge === "Free" ? "bg-emerald-700 text-white" : "bg-slate-900 text-white"}`}>{step.badge}</span>
+                  </span>
+                  <span className="mt-0.5 block text-xs text-slate-600">{step.body}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ol>
 
         <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label="Sample personas">
           {SAMPLE_PERSONAS.map((p) => (
@@ -258,7 +320,7 @@ export function Simulator() {
         )}
       </section>
 
-      <main className="mt-8 grid gap-6 lg:grid-cols-12">
+      <main id="compare" className="mt-8 grid scroll-mt-20 gap-6 lg:grid-cols-12">
         <div className="order-2 lg:order-1 lg:col-span-5">
           <InputsPanel input={input} onChange={edit} />
         </div>
@@ -278,7 +340,7 @@ export function Simulator() {
       {result && (
         <div className="mt-10 space-y-6">
           <LossVsSaved result={result} unlocked={unlocked} onActivate={() => openCheckout("annual")} />
-          <PlanReport input={input} result={result} />
+          <div id="shield" className="scroll-mt-20">
           {unlocked ? (
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
@@ -302,8 +364,10 @@ export function Simulator() {
               />
             </div>
           ) : (
-            <Paywall onActivate={() => openCheckout("annual")} />
+            <Paywall onActivate={() => openCheckout("annual")} catchPreview={catchPreview} />
           )}
+          </div>
+          <PlanReport input={input} result={result} />
         </div>
       )}
 

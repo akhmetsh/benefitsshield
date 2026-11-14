@@ -1,9 +1,14 @@
 "use client";
 
+import { usd } from "@/lib/format";
+import { HOSPITAL_BILL, HOSPITAL_DEMAND, billTotal } from "@/lib/sample-bills";
+import type { BillAudit } from "@/lib/engine/calculator";
 import { REGULAR_PRICE_CENTS, formatPrice, priceCents } from "@/lib/pricing";
 
 interface Props {
   onActivate: () => void;
+  /** Engine audit of the sample overcharged hospital bill on the user's plan. */
+  catchPreview: BillAudit | null;
 }
 
 const FEATURES = [
@@ -22,13 +27,13 @@ const FEATURES = [
 ];
 
 /** Inline preview of Pro. The button opens the checkout modal. */
-export function Paywall({ onActivate }: Props) {
+export function Paywall({ onActivate, catchPreview }: Props) {
   const offer = priceCents("annual", { timerActive: true, exitClaimed: false });
   return (
     <section id="unlock" className="scroll-mt-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-md sm:p-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">BenefitsShield Pro · Overcharge Shield</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">BenefitsShield Pro · Medical Bill Overcharge Shield &amp; Copilot</p>
           <h2 className="mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">Protect Your 2027 Savings from Hospital Billing Errors</h2>
         </div>
         <p className="tabular text-slate-900">
@@ -50,6 +55,16 @@ export function Paywall({ onActivate }: Props) {
           </li>
         ))}
       </ul>
+
+      {catchPreview && catchPreview.overcharge > 0 && (
+        <div className="mt-6 rounded-2xl border-2 border-dashed border-emerald-500 bg-emerald-50 p-4" aria-label="Real catch preview">
+          <p className="text-xs font-bold uppercase tracking-wide text-emerald-900">Real Catch Preview</p>
+          <p className="mt-1 text-sm font-medium text-emerald-950">
+            Example catch: {usd(billTotal(HOSPITAL_BILL))} hospital bill with {usd(HOSPITAL_DEMAND)} demanded →{" "}
+            <span className="font-extrabold text-emerald-700">Shield blocks {usd(catchPreview.overcharge)} overcharge</span>
+          </p>
+        </div>
+      )}
 
       <button
         type="button"
