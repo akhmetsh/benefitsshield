@@ -1,10 +1,11 @@
 "use client";
 
 import { usdCents } from "@/lib/format";
+import { formatPrice, priceCents } from "@/lib/pricing";
 import type { CalculationResult } from "@/lib/schema";
 
 /** Side-by-side stakes: what the costliest plan loses vs what the best plan keeps. */
-export function LossVsSaved({ result, unlocked }: { result: CalculationResult; unlocked: boolean }) {
+export function LossVsSaved({ result, unlocked, onActivate }: { result: CalculationResult; unlocked: boolean; onActivate: () => void }) {
   const best = result.plans[0];
   const worst = result.plans[result.plans.length - 1];
   const gap = result.savingsVsMostExpensive;
@@ -36,9 +37,9 @@ export function LossVsSaved({ result, unlocked }: { result: CalculationResult; u
         {unlocked ? (
           <p className="mt-4 rounded-xl bg-white/70 px-4 py-3 text-sm font-semibold text-emerald-900">Pro is active: scan bills in the Billing Error Shield below.</p>
         ) : (
-          <a href="#unlock" className="mt-4 block rounded-xl bg-emerald-700 px-4 py-3 text-center text-sm font-bold text-white shadow-sm hover:bg-emerald-800 focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-600/30">
-            Protect Your 2027 Savings from Hospital Billing Errors ($39/yr)
-          </a>
+          <button type="button" onClick={onActivate} className="mt-4 block w-full rounded-xl bg-emerald-700 px-4 py-3 text-center text-sm font-bold text-white shadow-sm hover:bg-emerald-800 focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-600/30">
+            Protect Your 2027 Savings from Hospital Billing Errors ({formatPrice(priceCents("annual", { timerActive: true, exitClaimed: false }))}/yr)
+          </button>
         )}
       </div>
     </section>

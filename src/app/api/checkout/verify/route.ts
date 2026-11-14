@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PlanTierSchema } from "@/lib/schema";
 import { getStripe } from "@/lib/stripe";
 
 const SessionIdSchema = z.string().regex(/^cs_test_[A-Za-z0-9_]{10,200}$/);
@@ -12,7 +13,17 @@ export async function GET(request: Request) {
   try {
     const session = await stripe.checkout.sessions.retrieve(id.data);
     const paid = session.status === "complete" && session.payment_status === "paid";
-    return Response.json({ paid }, { headers: { "cache-control": "no-store" } });
+    const tier = PlanTierSchema.safeParse(session.metadata?.tier);
+    return Response.json(
+      {
+        paid,
+        tier: tier.success ? tier.data : null,
+        timerActive: session.metadata?.timerActive === "true",
+        exitClaimed: session.metadata?.exitClaimed === "true",
+        amountCents: session.amount_total ?? 0,
+      },
+      { headers: { "cache-control": "no-store" } },
+    );
   } catch {
     return Response.json({ paid: false }, { status: 502 });
   }

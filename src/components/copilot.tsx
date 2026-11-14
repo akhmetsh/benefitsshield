@@ -7,9 +7,13 @@ import { PaycheckCard } from "@/components/paycheck-card";
 import { IRS_2027, addMonths, computeTrackerSnapshot, estimateMemberShare } from "@/lib/engine/calculator";
 import { formatIsoDate, percent, usd, usdCents } from "@/lib/format";
 import { buildFsaCalendar } from "@/lib/ics";
-import type { CalculationResult, Expense, HealthPlan, RetentionState, UserInput } from "@/lib/schema";
+import type { Expense, HealthPlan, PlanTier, RetentionState, UserInput, CalculationResult } from "@/lib/schema";
 
 interface Props {
+  tier: PlanTier;
+  auditsUsed: number;
+  onScanComplete: () => void;
+  onUpgrade: () => void;
   input: UserInput;
   result: CalculationResult;
   retention: RetentionState | null;
@@ -44,13 +48,14 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function Copilot({ input, result, retention, onChange }: Props) {
+export function Copilot({ tier, auditsUsed, onScanComplete, onUpgrade, input, result, retention, onChange }: Props) {
+  const annual = tier === "annual";
   const trackedPlan = retention ? input.plans.find((p) => p.id === retention.selectedPlanId) : undefined;
   const scanPlan = trackedPlan ?? input.plans.find((p) => p.id === result.recommendedPlanId) ?? input.plans[0];
   const scanTier = retention?.coverageTier ?? input.coverageTier;
   const planResult = result.plans.find((p) => p.planId === scanPlan.id) ?? result.plans[0];
 
-  const logVerified = retention
+  const logVerified = retention && annual
     ? (amount: number, description: string) => {
         const date = addMonths(retention.enrolledOn, retention.demoMonthOffset);
         onChange({
@@ -72,9 +77,28 @@ export function Copilot({ input, result, retention, onChange }: Props) {
 
   return (
     <div className="space-y-6">
-      <BillScanner plan={scanPlan} tier={scanTier} onLog={logVerified} />
-      <PaycheckCard plan={planResult} fsaElection={retention ? retention.fsaElection : planResult.fsaElection} />
-      {!retention ? (
+      <BillScanner
+        plan={scanPlan}
+        tier={scanTier}
+        onLog={logVerified}
+        scansLimit={annual ? undefined : 1}
+        scansUsed={auditsUsed}
+        onScanComplete={onScanComplete}
+        onUpgrade={onUpgrade}
+        noTrackerHint={annual ? "Start your 2027 tracker below to log the verified share." : "Logging to the YTD tracker is part of the Annual Shield."}
+      />
+      {!annual ? (
+        <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-center sm:p-6">
+          <h2 className="text-lg font-bold text-slate-900">Paycheck setup &amp; year-round tracker</h2>
+          <p className="mt-1 text-sm text-slate-600">26-paycheck HSA/FSA amounts, deductible tracking and FSA rescue alerts are included in the Annual Shield.</p>
+          <button type="button" onClick={onUpgrade} className="mt-3 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-800">
+            Upgrade to the Annual Shield
+          </button>
+        </section>
+      ) : (
+        <PaycheckCard plan={planResult} fsaElection={retention ? retention.fsaElection : planResult.fsaElection} />
+      )}
+      {!annual ? null : !retention ? (
         <StartTracker input={input} result={result} onStart={onChange} />
       ) : trackedPlan ? (
         <Tracker plan={trackedPlan} state={retention} onChange={onChange} />

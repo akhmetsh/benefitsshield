@@ -21,3 +21,12 @@ export function saveApp(app: PersistedApp): void {
     // Storage can be full or blocked (private mode). The app still works for this session.
   }
 }
+
+/** Wipes all saved state (used by "Lock Demo" to replay the paywall). */
+export function clearApp(): void {
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Nothing to clear if storage is blocked.
+  }
+}

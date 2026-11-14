@@ -261,6 +261,20 @@ export type RetentionState = z.infer<typeof RetentionStateSchema>;
 // App persistence (one localStorage key) and summary API
 // ---------------------------------------------------------------------------
 
+export const PlanTierSchema = z.enum(["single", "annual"]);
+export type PlanTier = z.infer<typeof PlanTierSchema>;
+
+/** What the user chose at checkout. The email never leaves the browser. */
+export const PurchaseSchema = z.object({
+  tier: PlanTierSchema,
+  email: z.union([z.literal(""), z.string().email().max(120)]),
+  amountCents: z.number().int().min(0).max(100_000),
+  method: z.enum(["demo", "stripe"]),
+  timerActive: z.boolean(),
+  exitClaimed: z.boolean(),
+});
+export type Purchase = z.infer<typeof PurchaseSchema>;
+
 /** Everything the browser saves. Validated on load; anything invalid is dropped. */
 export const PersistedAppSchema = z.object({
   version: z.literal(1),
@@ -271,6 +285,10 @@ export const PersistedAppSchema = z.object({
   input: UserInputSchema,
   /** Post-enrollment tracker; null until the user starts it. */
   retention: RetentionStateSchema.nullable(),
+  /** Chosen tier and email. Present before payment completes when a Stripe checkout is pending. */
+  purchase: PurchaseSchema.nullable().default(null),
+  /** Bill audits run so far (the Single Audit tier allows one). */
+  auditsUsed: z.number().int().min(0).max(10_000).default(0),
 });
 export type PersistedApp = z.infer<typeof PersistedAppSchema>;
 

@@ -12,6 +12,13 @@ interface Props {
   tier: CoverageTier;
   /** Logs the verified share to the tracker. Undefined until the tracker is started. */
   onLog?: (amount: number, description: string) => void;
+  /** Max audits for this tier (1 for the Single Audit). Undefined means unlimited. */
+  scansLimit?: number;
+  scansUsed: number;
+  onScanComplete: () => void;
+  onUpgrade: () => void;
+  /** Shown instead of the log button when there is no tracker to log into. */
+  noTrackerHint: string;
 }
 
 const SCAN_MS = 1_200;
@@ -49,7 +56,8 @@ function NumberBox({ id, label, value, onChange, hint }: { id: string; label: st
   );
 }
 
-export function BillScanner({ plan, tier, onLog }: Props) {
+export function BillScanner({ plan, tier, onLog, scansLimit, scansUsed, onScanComplete, onUpgrade, noTrackerHint }: Props) {
+  const exhausted = scansLimit !== undefined && scansUsed >= scansLimit;
   const terms = getTierTerms(plan, tier);
   const [phase, setPhase] = useState<"idle" | "scanning" | "done">("idle");
   const [progress, setProgress] = useState(0);
@@ -80,6 +88,7 @@ export function BillScanner({ plan, tier, onLog }: Props) {
       setTimeout(() => {
         setStatement(build());
         setPhase("done");
+        onScanComplete();
       }, SCAN_MS),
     ];
   };
@@ -136,12 +145,23 @@ export function BillScanner({ plan, tier, onLog }: Props) {
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">Billing error shield</p>
           <h2 className="mt-1 text-xl font-bold text-slate-900">Medical Bill / EOB Overcharge Scanner</h2>
+          {scansLimit !== undefined && <p className="mt-1 text-xs text-slate-500">Single Audit: {Math.max(0, scansLimit - scansUsed)} of {scansLimit} audit left</p>}
         </div>
         <span className="rounded-full bg-slate-900 px-3 py-1 text-[11px] font-bold tracking-wide text-white">
           CLIENT-SIDE BILL SIMULATOR • ZERO PII STORED
         </span>
       </div>
 
+      {exhausted ? (
+        <div className="mt-4 rounded-2xl border-2 border-emerald-500 bg-emerald-50 p-4">
+          <p className="text-sm font-semibold text-emerald-950">Your Single Bill Audit is used.</p>
+          <p className="mt-1 text-sm text-emerald-900">Upgrade to the Annual Shield for unlimited bill audits, paycheck setup and the year-round tracker.</p>
+          <button type="button" onClick={onUpgrade} className="mt-3 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-800">
+            Upgrade to the Annual Shield
+          </button>
+        </div>
+      ) : (
+        <>
       <div
         role="button"
         tabIndex={0}
@@ -170,6 +190,9 @@ export function BillScanner({ plan, tier, onLog }: Props) {
       <button type="button" onClick={startManual} disabled={phase === "scanning"} className="mt-2 text-xs font-medium text-slate-600 underline disabled:opacity-60">
         Or type my own bill numbers
       </button>
+
+        </>
+      )}
 
       {phase === "scanning" && (
         <div className="mt-5 rounded-xl bg-slate-900 p-4 text-white" role="status">
@@ -260,7 +283,7 @@ export function BillScanner({ plan, tier, onLog }: Props) {
                 {logged ? "Logged to tracker ✓" : `+ Log Verified Share (${usdCents(audit.legalShare)}) to YTD Tracker`}
               </button>
             ) : (
-              <p className="self-center text-xs text-slate-500">Start your 2027 tracker below to log the verified share.</p>
+              <p className="self-center text-xs text-slate-500">{noTrackerHint}</p>
             )}
           </div>
           {audit.verdict === "OVERCHARGE" && (
