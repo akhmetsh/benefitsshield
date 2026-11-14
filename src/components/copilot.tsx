@@ -1,7 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { IRS_2027, computeTrackerSnapshot, estimateMemberShare } from "@/lib/engine/calculator";
+import { BillScanner } from "@/components/bill-scanner";
+import { FsaChips } from "@/components/fsa-chips";
+import { PaycheckCard } from "@/components/paycheck-card";
+import { IRS_2027, addMonths, computeTrackerSnapshot, estimateMemberShare } from "@/lib/engine/calculator";
 import { formatIsoDate, percent, usd, usdCents } from "@/lib/format";
 import { buildFsaCalendar } from "@/lib/ics";
 import type { CalculationResult, Expense, HealthPlan, RetentionState, UserInput } from "@/lib/schema";
@@ -42,26 +45,56 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 export function Copilot({ input, result, retention, onChange }: Props) {
-  if (!retention) return <StartTracker input={input} result={result} onStart={onChange} />;
-  const plan = input.plans.find((p) => p.id === retention.selectedPlanId);
-  if (!plan) {
-    return (
-      <Shell>
-        <p className="text-sm text-slate-700">Your saved plan is no longer in this comparison.</p>
-        <button type="button" onClick={() => onChange(null)} className="mt-3 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
-          Start a new tracker
-        </button>
-      </Shell>
-    );
-  }
-  return <Tracker plan={plan} state={retention} onChange={onChange} />;
+  const trackedPlan = retention ? input.plans.find((p) => p.id === retention.selectedPlanId) : undefined;
+  const scanPlan = trackedPlan ?? input.plans.find((p) => p.id === result.recommendedPlanId) ?? input.plans[0];
+  const scanTier = retention?.coverageTier ?? input.coverageTier;
+  const planResult = result.plans.find((p) => p.planId === scanPlan.id) ?? result.plans[0];
+
+  const logVerified = retention
+    ? (amount: number, description: string) => {
+        const date = addMonths(retention.enrolledOn, retention.demoMonthOffset);
+        onChange({
+          ...retention,
+          expenses: [
+            ...retention.expenses,
+            {
+              id: `bill-${retention.expenses.length + 1}-${date}-${Math.round(amount * 100)}`,
+              date,
+              description: description.slice(0, 120),
+              amount,
+              paidFrom: "POCKET",
+              countsTowardDeductible: true,
+            },
+          ],
+        });
+      }
+    : undefined;
+
+  return (
+    <div className="space-y-6">
+      <BillScanner plan={scanPlan} tier={scanTier} onLog={logVerified} />
+      <PaycheckCard plan={planResult} fsaElection={retention ? retention.fsaElection : planResult.fsaElection} />
+      {!retention ? (
+        <StartTracker input={input} result={result} onStart={onChange} />
+      ) : trackedPlan ? (
+        <Tracker plan={trackedPlan} state={retention} onChange={onChange} />
+      ) : (
+        <Shell>
+          <p className="text-sm text-slate-700">Your saved plan is no longer in this comparison.</p>
+          <button type="button" onClick={() => onChange(null)} className="mt-3 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white">
+            Start a new tracker
+          </button>
+        </Shell>
+      )}
+    </div>
+  );
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">Post-enrollment copilot</p>
-      <h2 className="mt-1 text-xl font-bold text-slate-900">Track your plan all year</h2>
+      <h2 className="mt-1 text-xl font-bold text-slate-900">Year-round tracker</h2>
       <div className="mt-4">{children}</div>
     </section>
   );
@@ -303,6 +336,7 @@ function Tracker({ plan, state, onChange }: { plan: HealthPlan; state: Retention
             </p>
             <p className="mt-1 text-xs text-slate-600">{usd(IRS_2027.healthFsaCarryoverMax)} can carry over; the rest is forfeited.</p>
           </div>
+          <FsaChips />
           <button type="button" onClick={downloadIcs} className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-900 hover:border-emerald-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-600/20">
             Download calendar reminder (.ics)
           </button>

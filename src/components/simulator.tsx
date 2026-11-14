@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Copilot } from "@/components/copilot";
 import { InputsPanel } from "@/components/inputs-panel";
 import { Paywall } from "@/components/paywall";
-import { ProReport } from "@/components/pro-report";
+import { LossVsSaved } from "@/components/loss-vs-saved";
+import { PlanReport } from "@/components/plan-report";
 import { ResultsPanel } from "@/components/results-panel";
 import { comparePlans } from "@/lib/engine/calculator";
 import { usd } from "@/lib/format";
@@ -216,7 +217,7 @@ export function Simulator() {
         <div className="order-1 lg:order-2 lg:col-span-7">
           <div className="lg:sticky lg:top-4">
             {computed.ok ? (
-              <ResultsPanel result={computed.result} bullets={brief.bullets} briefSource={brief.source} computeMs={hydrated ? computed.ms : null} unlocked={unlocked} />
+              <ResultsPanel result={computed.result} bullets={brief.bullets} briefSource={brief.source} computeMs={hydrated ? computed.ms : null} />
             ) : (
               <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">
                 {computed.message}
@@ -228,11 +229,10 @@ export function Simulator() {
 
       {result && (
         <div className="mt-10 space-y-6">
+          <LossVsSaved result={result} unlocked={unlocked} />
+          <PlanReport input={input} result={result} />
           {unlocked ? (
-            <>
-              <ProReport input={input} result={result} />
-              <Copilot input={input} result={result} retention={retention} onChange={setRetention} />
-            </>
+            <Copilot input={input} result={result} retention={retention} onChange={setRetention} />
           ) : (
             <Paywall onUnlock={unlock} />
           )}

@@ -114,7 +114,7 @@ function TaxShieldCard({ plan }: { plan: PlanResult }) {
   );
 }
 
-export function ProReport({ input, result }: { input: UserInput; result: CalculationResult }) {
+export function PlanReport({ input, result }: { input: UserInput; result: CalculationResult }) {
   const warnings = Array.from(new Set(result.warnings));
   return (
     <div className="space-y-4">

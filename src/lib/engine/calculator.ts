@@ -617,3 +617,156 @@ export function estimateMemberShare(
     Math.min(snapshot.oopRemaining, toDeductible + coinsurance),
   );
 }
+
+// ---------------------------------------------------------------------------
+// Medical bill / EOB audit
+// ---------------------------------------------------------------------------
+
+/** A clinic demand within this many dollars of the legal share counts as fair. */
+export const AUDIT_TOLERANCE_USD = 1;
+
+export interface BillAuditInput {
+  /** Total in-network allowed charges on the statement, USD. */
+  billedAmount: number;
+  /** Deductible and out-of-pocket dollars already paid this plan year, USD. */
+  ytdPaid: number;
+  /** What the clinic is asking the member to pay, USD. */
+  demandedAmount: number;
+}
+
+export interface BillAudit {
+  verdict: "OVERCHARGE" | "FAIR";
+  /** What the member legally owes under the plan rules. */
+  legalShare: number;
+  /** Demand minus legal share when the verdict is OVERCHARGE, else 0. */
+  overcharge: number;
+  remainingDeductible: number;
+  remainingOopMax: number;
+  /** Part of the legal share that goes to the deductible. */
+  deductiblePortion: number;
+  /** Part of the legal share that is coinsurance. */
+  coinsurancePortion: number;
+  /** True when the out-of-pocket maximum cut the legal share. */
+  cappedByOopMax: boolean;
+  /** What the member would owe if none of the YTD payments were counted. */
+  shareIgnoringYtd: number;
+  /** Plain-English reasons the demand looks wrong. Empty for a fair bill. */
+  findings: string[];
+}
+
+/**
+ * Checks a clinic's demand against the plan rules:
+ *
+ *   dedLeft  = max(0, deductible - ytdPaid)
+ *   oopLeft  = max(0, oopMax - ytdPaid)
+ *   legal    = min(oopLeft, min(bill, dedLeft) + max(0, bill - dedLeft) x coinsurance)
+ *
+ * The plan's deductible and out-of-pocket maximum are tracked in one YTD
+ * number: every dollar the member paid toward care counts toward both.
+ */
+export function auditBill(
+  plan: HealthPlan,
+  tier: CoverageTier,
+  bill: BillAuditInput,
+): BillAudit {
+  const terms = getTierTerms(plan, tier);
+  const billed = Math.max(0, bill.billedAmount);
+  const ytd = Math.max(0, bill.ytdPaid);
+  const demanded = Math.max(0, bill.demandedAmount);
+
+  const remainingDeductible = roundCents(Math.max(0, terms.deductible - ytd));
+  const remainingOopMax = roundCents(Math.max(0, terms.oopMax - ytd));
+  const room = { deductibleRemaining: remainingDeductible, oopRemaining: remainingOopMax };
+
+  const legalShare = estimateMemberShare(plan, room, billed);
+  const shareIgnoringYtd = estimateMemberShare(
+    plan,
+    { deductibleRemaining: terms.deductible, oopRemaining: terms.oopMax },
+    billed,
+  );
+  const deductiblePortion = roundCents(
+    Math.min(billed, remainingDeductible, remainingOopMax),
+  );
+  const coinsurancePortion = roundCents(legalShare - deductiblePortion);
+  const uncapped =
+    Math.min(billed, remainingDeductible) +
+    Math.max(0, billed - remainingDeductible) * plan.coinsuranceRate;
+  const cappedByOopMax = uncapped > remainingOopMax;
+
+  const gap = roundCents(demanded - legalShare);
+  const verdict = gap > AUDIT_TOLERANCE_USD ? "OVERCHARGE" : "FAIR";
+
+  const findings: string[] = [];
+  if (verdict === "OVERCHARGE") {
+    const usd = (n: number) => `$${n.toLocaleString("en-US")}`;
+    if (demanded >= billed && billed > 0) {
+      findings.push(
+        `Billed you the full ${usd(billed)} with no plan rules applied; your plan pays its share of in-network care.`,
+      );
+    } else if (ytd > 0 && demanded >= shareIgnoringYtd) {
+      findings.push(
+        `Applied the deductible as if nothing was paid yet, despite ${usd(roundCents(ytd))} already paid this year.`,
+      );
+    }
+    if (demanded > billed) {
+      findings.push(`Demands more than the total billed (${usd(billed)}).`);
+    }
+    if (findings.length === 0) {
+      findings.push(
+        `Wrong cost sharing: your plan's remaining deductible is ${usd(remainingDeductible)} and coinsurance is ${Math.round(plan.coinsuranceRate * 100)}%.`,
+      );
+    }
+    if (cappedByOopMax) {
+      findings.push(
+        `Ignored your out-of-pocket maximum: only ${usd(remainingOopMax)} of it is left this year.`,
+      );
+    }
+  }
+
+  return {
+    verdict,
+    legalShare,
+    overcharge: verdict === "OVERCHARGE" ? gap : 0,
+    remainingDeductible,
+    remainingOopMax,
+    deductiblePortion,
+    coinsurancePortion,
+    cappedByOopMax,
+    shareIgnoringYtd,
+    findings,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Paycheck setup
+// ---------------------------------------------------------------------------
+
+/** Biweekly pay: 26 paychecks a year (Workday, ADP and most payroll systems). */
+export const PAYCHECKS_PER_YEAR = 26;
+
+export interface PaycheckSchedule {
+  paychecks: number;
+  /** Amount for each of the first (paychecks - 1) checks, rounded down to the cent. */
+  perPaycheck: number;
+  /** Final check, adjusted so the year adds up exactly. */
+  finalPaycheck: number;
+}
+
+/**
+ * Splits a yearly payroll amount over the year's paychecks:
+ *
+ *   perPaycheck  = floor(annual x 100 / paychecks) / 100
+ *   finalCheck   = annual - perPaycheck x (paychecks - 1)
+ */
+export function calculatePaycheckSchedule(
+  annualAmount: number,
+  paychecks: number = PAYCHECKS_PER_YEAR,
+): PaycheckSchedule {
+  const annual = Math.max(0, annualAmount);
+  const perPaycheck = Math.floor((annual * 100) / paychecks + 1e-9) / 100;
+  return {
+    paychecks,
+    perPaycheck: roundCents(perPaycheck),
+    finalPaycheck: roundCents(annual - perPaycheck * (paychecks - 1)),
+  };
+}

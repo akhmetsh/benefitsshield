@@ -8,16 +8,16 @@ interface Props {
 
 const FEATURES = [
   {
-    title: "4-scenario stress matrix",
-    body: "Your net cost on both plans in a $650, $2,200, $14,000 and $45,000 medical year.",
+    title: "Medical Bill / EOB Overcharge Scanner",
+    body: "Check any hospital bill against your plan's deductible, coinsurance and out-of-pocket max, then copy a dispute script.",
   },
   {
-    title: "2027 IRS tax shield",
-    body: "Federal, state and FICA savings from your HSA and FSA, with the 2027 limits applied.",
+    title: "Biweekly paycheck setup",
+    body: "The exact HSA and FSA amount for each of your 26 paychecks to use your 2027 IRS limits.",
   },
   {
-    title: "Post-enrollment copilot",
-    body: "Deductible tracker, expense log and an FSA use-it-or-lose-it countdown with a calendar reminder.",
+    title: "Deductible & FSA copilot",
+    body: "Log bills all year, watch the deductible fill, and get an FSA use-it-or-lose-it countdown with a calendar reminder.",
   },
 ];
 
@@ -55,8 +55,8 @@ export function Paywall({ onUnlock }: Props) {
     <section id="unlock" className="scroll-mt-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-md sm:p-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">BenefitsShield Pro</p>
-          <h2 className="mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">Unlock your full plan</h2>
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">BenefitsShield Pro · Overcharge Shield</p>
+          <h2 className="mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">Protect Your 2027 Savings from Hospital Billing Errors</h2>
         </div>
         <p className="text-slate-900">
           <span className="text-4xl font-bold">$39</span>

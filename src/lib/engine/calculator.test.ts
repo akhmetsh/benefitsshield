@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_ALLOWED_AMOUNTS,
   IRS_2027,
+  PAYCHECKS_PER_YEAR,
   addMonths,
+  auditBill,
+  calculatePaycheckSchedule,
   calculateFsaElection,
   calculateFsaForfeiture,
   calculateHsaContribution,
@@ -641,5 +644,98 @@ describe("estimateMemberShare", () => {
     expect(
       estimateMemberShare(plan, { deductibleRemaining: 0, oopRemaining: 0 }, 1_000),
     ).toBe(0);
+  });
+});
+
+describe("auditBill", () => {
+  // HDHP fixture, self-only: deductible 2,000, OOP max 5,000, coinsurance 20%.
+  const audit = (billedAmount: number, ytdPaid: number, demandedAmount: number) =>
+    auditBill(HDHP, "SELF_ONLY", { billedAmount, ytdPaid, demandedAmount });
+
+  it("flags a clinic that ignores the deductible already paid", () => {
+    // ded left = 0, OOP left = 5,000 - 2,000 = 3,000
+    // legal = min(3,000, 0 + 4,200 x 0.2) = 840
+    // ignoring YTD = 2,000 + (4,200 - 2,000) x 0.2 = 2,440; demand 2,650 >= 2,440
+    const a = audit(4_200, 2_000, 2_650);
+    expect(a.legalShare).toBe(840);
+    expect(a.shareIgnoringYtd).toBe(2_440);
+    expect(a.verdict).toBe("OVERCHARGE");
+    expect(a.overcharge).toBe(1_810); // 2,650 - 840
+    expect(a.deductiblePortion).toBe(0);
+    expect(a.coinsurancePortion).toBe(840);
+    expect(a.findings[0]).toContain("deductible as if nothing was paid");
+  });
+
+  it("accepts a fair bill inside the remaining deductible", () => {
+    // ded left = 2,000; bill 1,200 <= 2,000 -> legal = 1,200
+    const a = audit(1_200, 0, 1_200);
+    expect(a.legalShare).toBe(1_200);
+    expect(a.verdict).toBe("FAIR");
+    expect(a.overcharge).toBe(0);
+    expect(a.findings).toEqual([]);
+  });
+
+  it("splits a partly-met deductible into deductible and coinsurance", () => {
+    // YTD 500 -> ded left 1,500; bill 3,000: 1,500 + (3,000 - 1,500) x 0.2 = 1,800
+    const a = audit(3_000, 500, 1_800);
+    expect(a.remainingDeductible).toBe(1_500);
+    expect(a.deductiblePortion).toBe(1_500);
+    expect(a.coinsurancePortion).toBe(300);
+    expect(a.legalShare).toBe(1_800);
+    expect(a.verdict).toBe("FAIR");
+  });
+
+  it("caps the legal share at the remaining out-of-pocket maximum", () => {
+    // YTD 4,900 -> OOP left 100; uncapped 4,200 x 0.2 = 840 -> capped at 100
+    const a = audit(4_200, 4_900, 840);
+    expect(a.legalShare).toBe(100);
+    expect(a.cappedByOopMax).toBe(true);
+    expect(a.overcharge).toBe(740); // 840 - 100
+    expect(a.findings.some((f) => f.includes("out-of-pocket maximum"))).toBe(true);
+  });
+
+  it("flags a bill for the full billed amount", () => {
+    // bill 1,200 demanded 1,200 with YTD 2,000 -> legal = 1,200 x 0.2 = 240
+    const a = audit(1_200, 2_000, 1_200);
+    expect(a.legalShare).toBe(240);
+    expect(a.overcharge).toBe(960);
+    expect(a.findings[0]).toContain("full $1,200");
+  });
+
+  it("treats a demand below the legal share, or within $1 of it, as fair", () => {
+    expect(audit(1_200, 0, 1_000).verdict).toBe("FAIR");
+    expect(audit(1_200, 0, 1_200.99).verdict).toBe("FAIR");
+    expect(audit(1_200, 0, 1_201.01).verdict).toBe("OVERCHARGE");
+  });
+
+  it("charges nothing when the out-of-pocket maximum is already reached", () => {
+    const a = audit(1_000, 5_000, 300);
+    expect(a.legalShare).toBe(0);
+    expect(a.overcharge).toBe(300);
+  });
+});
+
+describe("calculatePaycheckSchedule", () => {
+  it("uses 26 biweekly paychecks", () => {
+    expect(PAYCHECKS_PER_YEAR).toBe(26);
+  });
+
+  it("splits an amount that divides unevenly, with the cents on the last check", () => {
+    // 3,750 / 26 = 144.2307... -> 144.23 x 25 = 3,605.75; final = 3,750 - 3,605.75 = 144.25
+    const s = calculatePaycheckSchedule(3_750);
+    expect(s.perPaycheck).toBe(144.23);
+    expect(s.finalPaycheck).toBe(144.25);
+    expect(roundCents(s.perPaycheck * 25 + s.finalPaycheck)).toBe(3_750);
+  });
+
+  it("splits an exact amount evenly", () => {
+    // 2,600 / 26 = 100
+    const s = calculatePaycheckSchedule(2_600);
+    expect(s.perPaycheck).toBe(100);
+    expect(s.finalPaycheck).toBe(100);
+  });
+
+  it("returns zero for zero", () => {
+    expect(calculatePaycheckSchedule(0)).toEqual({ paychecks: 26, perPaycheck: 0, finalPaycheck: 0 });
   });
 });

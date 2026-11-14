@@ -1,8 +1,7 @@
 "use client";
 
 import { CostChart } from "@/components/cost-chart";
-import { usd, usdCents } from "@/lib/format";
-import { STRESS_SCENARIOS } from "@/lib/scenarios";
+import { usdCents } from "@/lib/format";
 import type { CalculationResult } from "@/lib/schema";
 
 interface Props {
@@ -10,10 +9,9 @@ interface Props {
   bullets: string[];
   briefSource: "llm" | "template";
   computeMs: number | null;
-  unlocked: boolean;
 }
 
-export function ResultsPanel({ result, bullets, briefSource, computeMs, unlocked }: Props) {
+export function ResultsPanel({ result, bullets, briefSource, computeMs }: Props) {
   const [winner, runnerUp] = result.plans;
   const tie = result.savingsVsNextBest === 0;
   return (
@@ -75,15 +73,6 @@ export function ResultsPanel({ result, bullets, briefSource, computeMs, unlocked
         </ul>
       </section>
 
-      {!unlocked && (
-        <a
-          href="#unlock"
-          className="block rounded-2xl bg-slate-900 p-5 text-center text-white shadow-sm transition hover:bg-slate-800"
-        >
-          <span className="block text-base font-semibold">Stress-test it: {usd(STRESS_SCENARIOS[STRESS_SCENARIOS.length - 1].charges)} worst year, tax shield, year-round copilot</span>
-          <span className="mt-1 block text-sm text-slate-300">Unlock everything for $39/yr →</span>
-        </a>
-      )}
     </div>
   );
 }
