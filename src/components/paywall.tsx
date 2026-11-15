@@ -3,7 +3,7 @@
 import { usd } from "@/lib/format";
 import { HOSPITAL_BILL, HOSPITAL_DEMAND, SAMPLE_CATCH_PLAN, SAMPLE_CATCH_YTD, billTotal } from "@/lib/sample-bills";
 import type { BillAudit } from "@/lib/engine/calculator";
-import { REGULAR_PRICE_CENTS, formatPrice, priceCents } from "@/lib/pricing";
+import { formatPrice, priceCents } from "@/lib/pricing";
 
 interface Props {
   onActivate: () => void;
@@ -28,7 +28,6 @@ const FEATURES = [
 
 /** Inline preview of Pro. The button opens the checkout modal. */
 export function Paywall({ onActivate, catchPreview }: Props) {
-  const offer = priceCents("annual", { timerActive: true, exitClaimed: false });
   return (
     <section id="unlock" className="scroll-mt-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-md sm:p-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -37,10 +36,9 @@ export function Paywall({ onActivate, catchPreview }: Props) {
           <h2 className="mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">Protect Your 2027 Savings from Hospital Billing Errors</h2>
         </div>
         <p className="tabular text-slate-900">
-          <span className="mr-2 text-lg text-slate-400 line-through">{formatPrice(REGULAR_PRICE_CENTS.annual)}</span>
-          <span className="text-4xl font-bold">{formatPrice(offer)}</span>
-          <span className="text-lg text-slate-600">/yr</span>
-          <span className="ml-2 block text-xs text-slate-500 sm:inline">USD · 50% launch offer</span>
+          <span className="text-4xl font-bold">{formatPrice(priceCents("annual"))}</span>
+          <span className="text-lg text-slate-600">/year</span>
+          <span className="ml-2 block text-xs text-slate-500 sm:inline">USD · billed annually</span>
         </p>
       </div>
 
@@ -73,7 +71,7 @@ export function Paywall({ onActivate, catchPreview }: Props) {
       >
         Activate 2027 Shield
       </button>
-      <p className="mt-3 text-xs text-slate-500">Or start with a single bill audit. Test mode: card 4242 4242 4242 4242.</p>
+      <p className="mt-3 text-xs text-slate-500">Or start with a single bill audit for {formatPrice(priceCents("single"))}, one-time. Test mode: card 4242 4242 4242 4242.</p>
     </section>
   );
 }

@@ -5,8 +5,6 @@ import { getStripe } from "@/lib/stripe";
 
 const BodySchema = z.object({
   tier: PlanTierSchema,
-  timerActive: z.boolean(),
-  exitClaimed: z.boolean(),
 });
 
 const PRODUCT_NAMES = {
@@ -27,10 +25,10 @@ export async function POST(request: Request) {
   if (!body.success) {
     return Response.json({ error: "Invalid checkout request" }, { status: 400 });
   }
-  const { tier, timerActive, exitClaimed } = body.data;
-  const amount = priceCents(tier, { timerActive, exitClaimed });
+  const { tier } = body.data;
+  const amount = priceCents(tier);
   const origin = new URL(request.url).origin;
-  const metadata = { tier, timerActive: String(timerActive), exitClaimed: String(exitClaimed) };
+  const metadata = { tier };
 
   try {
     const session = await stripe.checkout.sessions.create({

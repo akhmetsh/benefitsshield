@@ -270,8 +270,6 @@ export const PurchaseSchema = z.object({
   email: z.union([z.literal(""), z.string().email().max(120)]),
   amountCents: z.number().int().min(0).max(100_000),
   method: z.enum(["demo", "stripe"]),
-  timerActive: z.boolean(),
-  exitClaimed: z.boolean(),
 });
 export type Purchase = z.infer<typeof PurchaseSchema>;
 
@@ -289,8 +287,6 @@ export const PersistedAppSchema = z.object({
   purchase: PurchaseSchema.nullable().default(null),
   /** Bill audits run so far (the Single Audit tier allows one). */
   auditsUsed: z.number().int().min(0).max(10_000).default(0),
-  /** Epoch ms when the launch offer ends. Saved so a reload doesn't restart the timer. */
-  offerDeadline: z.number().int().positive().nullable().default(null),
 });
 export type PersistedApp = z.infer<typeof PersistedAppSchema>;
 

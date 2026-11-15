@@ -1,6 +1,6 @@
 # BenefitsShield
 
-A B2C web app for US employees choosing a 2027 health plan during open enrollment. It compares an HDHP + HSA against a traditional PPO using 2027 IRS rules, shows the true net annual cost of each, then sells a Pro tier (a one-time Single Bill Audit, or the Annual Shield at $39/yr during the 50% launch offer, $78/yr list) that protects the savings with a **medical bill overcharge scanner** and a year-round tracker.
+A B2C web app for US employees choosing a 2027 health plan during open enrollment. It compares an HDHP + HSA against a traditional PPO using 2027 IRS rules, shows the true net annual cost of each, then sells a Pro tier (a one-time Single Bill Audit at $9.50, or the Annual Shield core subscription at $39/year) that protects the savings with a **medical bill overcharge scanner** and a year-round tracker.
 
 Built for Business Cup 2.0, Track 01 (Money). No login, no database, no PII: all state lives in your browser's `localStorage`.
 

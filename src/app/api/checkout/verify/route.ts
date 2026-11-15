@@ -18,8 +18,6 @@ export async function GET(request: Request) {
       {
         paid,
         tier: tier.success ? tier.data : null,
-        timerActive: session.metadata?.timerActive === "true",
-        exitClaimed: session.metadata?.exitClaimed === "true",
         amountCents: session.amount_total ?? 0,
       },
       { headers: { "cache-control": "no-store" } },

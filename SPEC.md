@@ -179,7 +179,8 @@ The deck may show LTV and CAC only as they appear in `docs/unit-economics.md`, w
 1. After checkout the user picks the plan they enrolled in; the tracker starts.
 2. Through the year they log bills. The tracker shows deductible progress and the HSA pace.
 3. From 90 days before the FSA deadline the tracker warns how many dollars will be lost.
-4. Next open enrollment, last year's logged spending pre-fills "expected care", so the second comparison is better than the first. That is the reason to renew.
+
+**Roadmap (in build, not in the live app):** next open enrollment, last year's logged spending pre-fills "expected care", so the second comparison is better than the first.
 
 **Demo proof:** the "Fast-forward +6 months" button shows steps 2 and 3 in ten seconds; a reload keeps the state.
 
@@ -221,4 +222,4 @@ Clock: now 02:00. Feature freeze **08:30**. Submit **10:30**. Deadline 12:00.
 
 1. **"Free calculators already do this."** Our answer is accuracy (FICA, employer money inside the limit, FSA forfeiture, state rules, IRS qualification check) plus the year tracker. A sharper segment, such as expecting parents across two employers, would be a stronger answer; see `BenefitsShield_CONTEXT.md`.
 2. **Unit economics** are benchmarked or labeled `ASSUMPTION` line by line in `docs/unit-economics.md`; read the LTV : CAC result there before pitching.
-3. **Retention relies on manual bill logging.** The FSA countdown and next-year pre-fill carry the story.
+3. **Retention relies on manual bill logging.** The FSA countdown carries the story today; next-year pre-fill is on the roadmap (§6).

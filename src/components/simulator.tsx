@@ -11,7 +11,7 @@ import { ResultsPanel } from "@/components/results-panel";
 import { auditBill, comparePlans } from "@/lib/engine/calculator";
 import { usd } from "@/lib/format";
 import { templateSummary } from "@/lib/llm/fallback";
-import { OFFER_DURATION_MS, formatPrice } from "@/lib/pricing";
+import { formatPrice } from "@/lib/pricing";
 import { SAMPLE_PERSONAS } from "@/lib/personas";
 import { HOSPITAL_BILL, HOSPITAL_DEMAND, SAMPLE_CATCH_PLAN, SAMPLE_CATCH_YTD, billTotal } from "@/lib/sample-bills";
 import {
@@ -108,8 +108,6 @@ export function Simulator() {
   const [auditsUsed, setAuditsUsed] = useState(0);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutTier, setCheckoutTier] = useState<PlanTier>("annual");
-  /** Epoch ms when the 10-minute offer ends. Starts the first time the modal opens. */
-  const [offerDeadline, setOfferDeadline] = useState<number | null>(null);
 
   // Restore saved state, and finish a Stripe test checkout if we just came back from one.
   /* eslint-disable react-hooks/set-state-in-effect -- localStorage is only readable after mount; reading it during render would cause a hydration mismatch */
@@ -122,14 +120,13 @@ export function Simulator() {
       setRetention(saved.retention);
       setPurchase(saved.purchase);
       setAuditsUsed(saved.auditsUsed);
-      setOfferDeadline(saved.offerDeadline);
     }
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id");
     if (params.get("checkout") === "success" && sessionId) {
       fetch(`/api/checkout/verify?session_id=${encodeURIComponent(sessionId)}`)
         .then((r) => r.json())
-        .then((d: { paid?: boolean; tier?: string | null; amountCents?: number; timerActive?: boolean; exitClaimed?: boolean }) => {
+        .then((d: { paid?: boolean; tier?: string | null; amountCents?: number }) => {
           const tier = PlanTierSchema.safeParse(d.tier);
           if (d.paid && tier.success) {
             // Keep the email saved before the redirect; the server never saw it.
@@ -138,8 +135,6 @@ export function Simulator() {
               email: prev?.email ?? "",
               amountCents: d.amountCents ?? 0,
               method: "stripe",
-              timerActive: Boolean(d.timerActive),
-              exitClaimed: Boolean(d.exitClaimed),
             }));
             setUnlocked(true);
             setNotice("Payment confirmed (Stripe test mode). Pro is unlocked.");
@@ -158,8 +153,8 @@ export function Simulator() {
 
   useEffect(() => {
     if (!hydrated) return;
-    saveApp({ version: 1, unlocked, personaId, input, retention: retention ? { ...retention, unlocked } : null, purchase, auditsUsed, offerDeadline });
-  }, [hydrated, unlocked, personaId, input, retention, purchase, auditsUsed, offerDeadline]);
+    saveApp({ version: 1, unlocked, personaId, input, retention: retention ? { ...retention, unlocked } : null, purchase, auditsUsed });
+  }, [hydrated, unlocked, personaId, input, retention, purchase, auditsUsed]);
 
   const computed = useMemo(() => compute(input), [input]);
   const result = computed.ok ? computed.result : null;
@@ -181,7 +176,6 @@ export function Simulator() {
   const persona = SAMPLE_PERSONAS.find((p) => p.id === personaId);
 
   const openCheckout = (tier: PlanTier = "annual") => {
-    if (offerDeadline === null) setOfferDeadline(Date.now() + OFFER_DURATION_MS);
     setCheckoutTier(tier);
     setCheckoutOpen(true);
   };
@@ -196,7 +190,7 @@ export function Simulator() {
   /** Saves the choice right now: the page is about to leave for Stripe. */
   const rememberBeforeStripe = (next: Purchase) => {
     setPurchase(next);
-    saveApp({ version: 1, unlocked, personaId, input, retention, purchase: next, auditsUsed, offerDeadline });
+    saveApp({ version: 1, unlocked, personaId, input, retention, purchase: next, auditsUsed });
   };
 
   /** Presenter reset: clears saved state and replays the paywall without Incognito. */
@@ -206,7 +200,6 @@ export function Simulator() {
     setPurchase(null);
     setAuditsUsed(0);
     setRetention(null);
-    setOfferDeadline(null);
     setCheckoutOpen(false);
     setPersonaId(DEFAULT_PERSONA.id);
     setInput(DEFAULT_PERSONA.input);
@@ -382,9 +375,8 @@ export function Simulator() {
         </div>
       )}
 
-      {checkoutOpen && offerDeadline !== null && (
+      {checkoutOpen && (
         <CheckoutModal
-          deadline={offerDeadline}
           initialTier={checkoutTier}
           initialEmail={purchase?.email ?? ""}
           onClose={() => setCheckoutOpen(false)}
