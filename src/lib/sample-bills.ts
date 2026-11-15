@@ -1,3 +1,5 @@
+import { SAMPLE_PERSONAS } from "@/lib/personas";
+
 /**
  * Fictional statements for the client-side bill simulator. They are inputs only:
  * the verdict always comes from auditBill(). No real bill is read or stored.
@@ -42,3 +44,10 @@ export function billTotal(bill: SampleBill): number {
 
 /** What the clinic demands on the overcharged hospital sample. */
 export const HOSPITAL_DEMAND = 2_650;
+
+/**
+ * Fixed inputs for the paywall's "Example catch" (labeled Sample bill): Maya's
+ * sample HDHP (self-only $2,000 deductible, 20% coinsurance), deductible already met.
+ */
+export const SAMPLE_CATCH_PLAN = SAMPLE_PERSONAS[0].input.plans[0];
+export const SAMPLE_CATCH_YTD = SAMPLE_CATCH_PLAN.selfOnly.deductible;

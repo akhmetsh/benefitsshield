@@ -1,7 +1,7 @@
 "use client";
 
 import { usd } from "@/lib/format";
-import { HOSPITAL_BILL, HOSPITAL_DEMAND, billTotal } from "@/lib/sample-bills";
+import { HOSPITAL_BILL, HOSPITAL_DEMAND, SAMPLE_CATCH_PLAN, SAMPLE_CATCH_YTD, billTotal } from "@/lib/sample-bills";
 import type { BillAudit } from "@/lib/engine/calculator";
 import { REGULAR_PRICE_CENTS, formatPrice, priceCents } from "@/lib/pricing";
 
@@ -58,9 +58,9 @@ export function Paywall({ onActivate, catchPreview }: Props) {
 
       {catchPreview && catchPreview.overcharge > 0 && (
         <div className="mt-6 rounded-2xl border-2 border-dashed border-emerald-500 bg-emerald-50 p-4" aria-label="Real catch preview">
-          <p className="text-xs font-bold uppercase tracking-wide text-emerald-900">Real Catch Preview</p>
+          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-emerald-900">Example catch <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-900">Sample bill</span></p>
           <p className="mt-1 text-sm font-medium text-emerald-950">
-            Example catch: {usd(billTotal(HOSPITAL_BILL))} hospital bill with {usd(HOSPITAL_DEMAND)} demanded →{" "}
+            {usd(billTotal(HOSPITAL_BILL))} hospital bill with {usd(HOSPITAL_DEMAND)} demanded, {usd(SAMPLE_CATCH_YTD)} deductible already met, {Math.round(SAMPLE_CATCH_PLAN.coinsuranceRate * 100)}% coinsurance →{" "}
             <span className="font-extrabold text-emerald-700">Shield blocks {usd(catchPreview.overcharge)} overcharge</span>
           </p>
         </div>

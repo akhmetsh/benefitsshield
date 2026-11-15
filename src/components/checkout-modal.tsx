@@ -190,7 +190,7 @@ export function CheckoutModal({ deadline, initialTier, initialEmail, onClose, on
 
         <div className="space-y-5 p-5">
           <div role="timer" aria-live="off" className={`rounded-xl px-4 py-3 text-center text-sm font-extrabold tracking-wide ${timerActive ? "bg-red-600 text-white" : "bg-slate-200 text-slate-700"}`}>
-            {timerActive ? `LIMITED OFFER: 50% OFF APPLIED FOR THE NEXT ${formatCountdown(remaining)}` : "OFFER ENDED — REGULAR PRICES APPLY (00:00)"}
+            {timerActive ? `LAUNCH OFFER (DEMO): 50% OFF APPLIED FOR THE NEXT ${formatCountdown(remaining)}` : "OFFER ENDED — REGULAR PRICES APPLY (00:00)"}
           </div>
 
           {view === "offer" ? (

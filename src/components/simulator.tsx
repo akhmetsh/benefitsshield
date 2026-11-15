@@ -8,12 +8,12 @@ import { Paywall } from "@/components/paywall";
 import { LossVsSaved } from "@/components/loss-vs-saved";
 import { PlanReport } from "@/components/plan-report";
 import { ResultsPanel } from "@/components/results-panel";
-import { auditBill, comparePlans, getTierTerms } from "@/lib/engine/calculator";
+import { auditBill, comparePlans } from "@/lib/engine/calculator";
 import { usd } from "@/lib/format";
 import { templateSummary } from "@/lib/llm/fallback";
 import { OFFER_DURATION_MS, formatPrice } from "@/lib/pricing";
 import { SAMPLE_PERSONAS } from "@/lib/personas";
-import { HOSPITAL_BILL, HOSPITAL_DEMAND, billTotal } from "@/lib/sample-bills";
+import { HOSPITAL_BILL, HOSPITAL_DEMAND, SAMPLE_CATCH_PLAN, SAMPLE_CATCH_YTD, billTotal } from "@/lib/sample-bills";
 import {
   SummaryResponseSchema,
   UserInputSchema,
@@ -122,6 +122,7 @@ export function Simulator() {
       setRetention(saved.retention);
       setPurchase(saved.purchase);
       setAuditsUsed(saved.auditsUsed);
+      setOfferDeadline(saved.offerDeadline);
     }
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id");
@@ -157,8 +158,8 @@ export function Simulator() {
 
   useEffect(() => {
     if (!hydrated) return;
-    saveApp({ version: 1, unlocked, personaId, input, retention: retention ? { ...retention, unlocked } : null, purchase, auditsUsed });
-  }, [hydrated, unlocked, personaId, input, retention, purchase, auditsUsed]);
+    saveApp({ version: 1, unlocked, personaId, input, retention: retention ? { ...retention, unlocked } : null, purchase, auditsUsed, offerDeadline });
+  }, [hydrated, unlocked, personaId, input, retention, purchase, auditsUsed, offerDeadline]);
 
   const computed = useMemo(() => compute(input), [input]);
   const result = computed.ok ? computed.result : null;
@@ -195,7 +196,7 @@ export function Simulator() {
   /** Saves the choice right now: the page is about to leave for Stripe. */
   const rememberBeforeStripe = (next: Purchase) => {
     setPurchase(next);
-    saveApp({ version: 1, unlocked, personaId, input, retention, purchase: next, auditsUsed });
+    saveApp({ version: 1, unlocked, personaId, input, retention, purchase: next, auditsUsed, offerDeadline });
   };
 
   /** Presenter reset: clears saved state and replays the paywall without Incognito. */
@@ -214,15 +215,12 @@ export function Simulator() {
 
   const tier: PlanTier = purchase?.tier ?? "annual";
 
-  // "Real catch" example for the paywall: the overcharged hospital sample, audited on the recommended plan.
-  const previewPlan = result ? (input.plans.find((p) => p.id === result.recommendedPlanId) ?? input.plans[0]) : null;
-  const catchPreview = previewPlan
-    ? auditBill(previewPlan, input.coverageTier, {
-        billedAmount: billTotal(HOSPITAL_BILL),
-        ytdPaid: getTierTerms(previewPlan, input.coverageTier).deductible,
-        demandedAmount: HOSPITAL_DEMAND,
-      })
-    : null;
+  // "Example catch" on the paywall: auditBill() on the fixed, labeled sample bill.
+  const catchPreview = auditBill(SAMPLE_CATCH_PLAN, "SELF_ONLY", {
+    billedAmount: billTotal(HOSPITAL_BILL),
+    ytdPaid: SAMPLE_CATCH_YTD,
+    demandedAmount: HOSPITAL_DEMAND,
+  });
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 lg:pb-12">
