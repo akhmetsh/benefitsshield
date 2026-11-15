@@ -92,9 +92,9 @@ function scrollToId(id: string) {
 }
 
 const JOURNEY = [
-  { n: 1, title: "Compare 2027 Plans", badge: "Free", body: "Exact net cost, employer seed & tax shield", target: "compare" },
-  { n: 2, title: "Audit Hospital Bills", badge: "Pro", body: "Catch EOB overcharges & copy dispute scripts", target: "shield" },
-  { n: 3, title: "Year-Round Copilot", badge: "Pro", body: "26-paycheck HR setup & FSA deadline alerts", target: "shield" },
+  { n: 1, title: "Compare 2027 plans", badge: "Free", body: "Exact net cost, employer HSA money and tax savings", target: "compare" },
+  { n: 2, title: "Audit hospital bills", badge: "Pro", body: "Catch EOB overcharges, copy a dispute script", target: "shield" },
+  { n: 3, title: "Year-round copilot", badge: "Pro", body: "Paycheck HSA setup and FSA deadline alerts", target: "shield" },
 ] as const;
 
 export function Simulator() {
@@ -241,7 +241,7 @@ export function Simulator() {
               onClick={() => scrollToId("shield")}
               className="rounded-full bg-emerald-700 px-3 py-1 text-xs font-bold text-white shadow-sm hover:bg-emerald-800 focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-600/30"
             >
-              🛡️ Bill Overcharge Shield
+              <span aria-hidden>🛡️ </span>Bill Overcharge Shield
             </button>
             {unlocked && (
               <button
@@ -249,7 +249,7 @@ export function Simulator() {
                 onClick={lockDemo}
                 className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:border-slate-500 focus:outline-none focus-visible:ring-4 focus-visible:ring-slate-300/50"
               >
-                Lock Demo
+                Reset demo
               </button>
             )}
           </div>
