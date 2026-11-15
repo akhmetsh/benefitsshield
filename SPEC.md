@@ -1,7 +1,7 @@
 # SPEC.md — BenefitsShield Master Product Specification
 
 Business Cup 2.0 · Track 01 — Money · US adults 25–45 · B2C only · Web only
-Plan year modelled: **2027**. Spec locked 2026-11-15 02:00 (Astana).
+Plan year modelled: **2027**. Spec written 2026-11-15 02:00 (Astana), updated at submission.
 
 ---
 
@@ -186,13 +186,13 @@ The deck may show LTV and CAC only as they appear in `docs/unit-economics.md`, w
 
 ---
 
-## 7. Build plan and hard cutlines
+## 7. Build log and cutlines (historical)
 
-Clock: now 02:00. Feature freeze **08:30**. Submit **10:30**. Deadline 12:00.
+**Status at submission:** live at https://benefitsshield.vercel.app/, 80 tests passing. The plan below is the schedule written at 02:00 and is kept as a record.
 
 | By | Done |
 |---|---|
-| 02:00 | Schema, engine, 54 passing tests ✅ |
+| 02:00 | Schema, engine, first passing test suite ✅ |
 | 02:45 | Next.js scaffold, public repo, Vercel deploy, engine wired to a bare page |
 | 05:00 | Full calculator UI in production: personas, inputs, result, chart, disclaimer |
 | 06:30 | Paywall and full report |
@@ -207,19 +207,21 @@ Clock: now 02:00. Feature freeze **08:30**. Submit **10:30**. Deadline 12:00.
 - **Never cut:** engine and tests, sample personas, own-number inputs, a working paywall, saved state across reloads, the disclaimer, the public repo with no secrets.
 
 ### Definition of done
-- [ ] URL opens straight into the calculator with Maya loaded; no login
-- [ ] Changing any input changes the result
+Ticked items were checked against the live site or the repo at submission. Unticked items are manual browser checks still to confirm before the pitch.
+
+- [x] URL opens straight into the calculator with Maya loaded; no login
+- [x] Changing any input changes the result (engine test "changes the output when the input changes")
 - [ ] Persona switch and "Use my own numbers" both work
-- [ ] Paywall completes with the printed test card (or the promo code)
+- [ ] Paywall completes with the Judge Demo Unlock (Stripe test checkout needs `STRIPE_SECRET_KEY` set on the deployment)
 - [ ] Tracker state survives a reload; fast-forward works
-- [ ] Disclaimer visible; `SAMPLE DATA` badge visible
+- [x] Disclaimer visible; `SAMPLE DATA` badge visible
 - [ ] Works on a phone; no console errors; no dead buttons
-- [ ] `npm run test` passes; repo public; no secrets; README present
+- [x] `npm run test` passes; repo public; no secrets; README present
 
 ---
 
 ## 8. Open risks
 
-1. **"Free calculators already do this."** Our answer is accuracy (FICA, employer money inside the limit, FSA forfeiture, state rules, IRS qualification check) plus the year tracker. A sharper segment, such as expecting parents across two employers, would be a stronger answer; see `BenefitsShield_CONTEXT.md`.
+1. **"Free calculators already do this."** Our answer is accuracy (FICA, employer money inside the limit, FSA forfeiture, state rules, IRS qualification check) plus the year tracker. A sharper segment, such as expecting parents choosing across two employers' plans, would be a stronger answer.
 2. **Unit economics** are benchmarked or labeled `ASSUMPTION` line by line in `docs/unit-economics.md`; read the LTV : CAC result there before pitching.
 3. **Retention relies on manual bill logging.** The FSA countdown carries the story today; next-year pre-fill is on the roadmap (§6).
