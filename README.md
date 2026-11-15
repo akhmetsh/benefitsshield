@@ -45,6 +45,9 @@ All dollars come from pure functions in `src/lib/engine/calculator.ts`; the UI a
 - **Federal and state marginal tax rates are user inputs**, not full bracket calculations.
 - The bill audit tracks one YTD figure for both the deductible and the out-of-pocket max.
 
+## Unit economics
+See [docs/unit-economics.md](docs/unit-economics.md): Conservative and Base cases, each number with its formula and cited benchmark or ASSUMPTION label. Regenerate with `npx tsx scripts/unit-economics.ts`.
+
 ## Optional LLM brief
 With `ANTHROPIC_API_KEY` set, `/api/summary` asks a model to reword the 3 bullets. The model writes `{placeholders}` only; output containing any digit or unknown placeholder is rejected, and engine numbers are injected afterwards. 4-second timeout; on any failure the rule-based text is used. The app works fully with no key.
 
