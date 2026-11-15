@@ -23,7 +23,7 @@ Pass/fail gates: B2C only, web only, no login wall, public repo, English UI.
 ## Tech stack
 
 - Next.js (App Router) + TypeScript (strict)
-- Tailwind CSS + shadcn/ui
+- Tailwind CSS (hand-written components, no UI kit)
 - Recharts for charts
 - Zod for every data boundary
 - Vitest for engine tests
