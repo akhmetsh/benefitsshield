@@ -477,7 +477,7 @@ describe("sample personas", () => {
     }
   });
 
-  it("Maya (single, TX, $95k): HDHP beats PPO by $2,235.63", () => {
+  it("Maya (single, TX, $95k): HDHP $1,266.12 vs PPO $3,501.75, so HDHP wins by $2,235.63", () => {
     const result = comparePlans(SAMPLE_PERSONAS[0].input);
     const hdhp = byId(result, "hdhp");
     const ppo = byId(result, "ppo");
@@ -490,14 +490,17 @@ describe("sample personas", () => {
     expectMoney(result.savingsVsNextBest, 2_235.63);
   });
 
-  it("Marcus (single, IL, low usage): HDHP beats PPO by $2,817", () => {
+  it("Marcus (single, IL, low usage): HDHP -$272.00 vs PPO $2,545.00, so HDHP wins by $2,817.00", () => {
     const result = comparePlans(SAMPLE_PERSONAS[1].input);
+    // HDHP: premiums 1,020 + care 150 (1 primary visit at $150, below the deductible)
+    //       - employer HSA 750 - tax savings 692 = -272 (employer money + tax savings exceed costs)
+    //       tax savings = 2,000 HSA x (22% federal + 4.95% IL + 7.65% FICA) = 692
     expectMoney(byId(result, "hdhp").netAnnualCost, -272); // 1,020 + 150 - 750 - 692
     expectMoney(byId(result, "ppo").netAnnualCost, 2_545);
     expectMoney(result.savingsVsNextBest, 2_817);
   });
 
-  it("Elena (family, WA, heavy usage): PPO beats HDHP by $3,496", () => {
+  it("Elena (family, WA, heavy usage): PPO $9,352.25 vs HDHP $12,848.25, so PPO wins by $3,496.00", () => {
     const result = comparePlans(SAMPLE_PERSONAS[2].input);
     const hdhp = byId(result, "hdhp");
     const ppo = byId(result, "ppo");
@@ -648,7 +651,9 @@ describe("estimateMemberShare", () => {
 });
 
 describe("auditBill", () => {
-  // HDHP fixture, self-only: deductible 2,000, OOP max 5,000, coinsurance 20%.
+  // Generic HDHP fixture, self-only: deductible 2,000, OOP max 5,000, coinsurance 20%.
+  // The paywall's example catch runs on Maya's sample HDHP (OOP max 4,500) instead;
+  // see src/lib/sample-bills.test.ts. Both give $840 owed / $1,810 overcharge.
   const audit = (billedAmount: number, ytdPaid: number, demandedAmount: number) =>
     auditBill(HDHP, "SELF_ONLY", { billedAmount, ytdPaid, demandedAmount });
 
