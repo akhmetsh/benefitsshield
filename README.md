@@ -1,5 +1,11 @@
 # BenefitsShield
 
+**At a glance**
+- **Live:** https://benefitsshield.vercel.app/ (no login; Maya's sample data loads first)
+- **What it does:** shows a US employee whether the HDHP + HSA or the PPO really costs less in 2027, then audits medical bills against the chosen plan.
+- **Engine:** `src/lib/engine/calculator.ts`. Pure functions, with every 2027 IRS constant in `IRS_2027`.
+- **Tests:** `npm install && npm run test` (80 tests). Persona results are in `src/lib/engine/calculator.test.ts` under `describe("sample personas")`; the $4,200 bill audit is in `src/lib/sample-bills.test.ts`.
+
 A B2C web app for US employees choosing a 2027 health plan during open enrollment. It compares an HDHP + HSA against a traditional PPO using 2027 IRS rules, shows the true net annual cost of each, then sells a Pro tier (a one-time Single Bill Audit at $9.50, or the Annual Shield core subscription at $39/year) that protects the savings with a **medical bill overcharge scanner** and a year-round tracker.
 
 Built for Business Cup 2.0, Track 01 (Money). No login, no database, no PII: all state lives in your browser's `localStorage`.
