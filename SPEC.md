@@ -7,11 +7,13 @@ Plan year modelled: **2027**. Spec written 2026-11-15 02:00 (Astana), updated at
 
 ## 1. Product in one line
 
-BenefitsShield shows a US employee which of their employer's health plans really costs less, HDHP + HSA or PPO, after premiums, expected care, employer HSA money and tax savings, then tracks the deductible, HSA and FSA through the year.
+BenefitsShield shows a US employee which of their employer's health plans really costs less, HDHP + HSA or PPO, after premiums, expected care, employer HSA money and tax savings. Paid users then audit medical bills against that plan and track the deductible and FSA through the year.
 
 **Originality:** employer-paid benefits tools (Nayya, ALEX) are sold to HR. BenefitsShield sells the same kind of guidance straight to the employee, with no employer and no insurer commission.
 
-**What the user pays for:** a clear answer in dollars ("Pick the HDHP. It costs you $2,235.63 less next year.") plus the year-round tracker that stops them losing FSA money.
+**What is free:** the clear answer in dollars ("Pick the HDHP. It costs you $2,235.63 less next year.") plus the full report behind it. That is the hook.
+
+**What the user pays for:** protecting that saving during the year. The **Overcharge Shield** checks a bill against the plan's deductible, coinsurance and out-of-pocket maximum and writes a dispute script. The **year-round copilot** gives 26-paycheck HSA/FSA amounts, a deductible tracker and FSA deadline alerts.
 
 ---
 
@@ -50,15 +52,16 @@ The page is the product. Sections stack top to bottom; nothing sits behind navig
    - Expected care: primary visits, specialist visits, prescriptions, other charges (slider).
    - Your plans (2 to 4): premium, deductible, out-of-pocket maximum, coinsurance, copays, employer HSA money, for both tiers.
    - Accounts: planned HSA and FSA contributions.
-4. **Result (free):** the winning plan, the dollar gap, and a bar chart of net annual cost per plan. Recomputes on every change.
-5. **Paywall:** "Unlock your full plan — $39/year". Opens Stripe Checkout in test mode. The test card `4242 4242 4242 4242`, any future date, any CVC, is printed beside the button.
-6. **Full report (paid):**
+4. **Result (free):** the winning plan, the dollar gap, a bar chart of net annual cost per plan, and a plain-English 3-bullet brief (LLM wording with template fallback). Recomputes on every change.
+5. **Stakes card (free):** "Status Quo Loss" (picking the costliest plan) against "BenefitsShield Optimization" (picking the best one). Both come from `savingsVsMostExpensive`.
+6. **Paywall:** "Protect Your 2027 Savings from Hospital Billing Errors", with an **Activate 2027 Shield** button. The checkout offers the $39/year Annual Shield or the $9.50 Single Bill Audit. **Judge Demo Unlock** works with no setup. Stripe Checkout (test mode) appears when a `sk_test_` key is configured. The test card `4242 4242 4242 4242`, any future date, any CVC, is printed beside the buttons.
+7. **Overcharge Shield (paid, both tiers):** load a sample statement or type billed amount, deductible paid so far and clinic demand. `auditBill()` returns the legal share, an `OVERCHARGE` / `FAIR` verdict, the billing errors found and a dispute script. The single audit allows one run; the annual tier is unlimited.
+8. **Year-round copilot (paid, annual only):** 26-paycheck HSA/FSA amounts, then a tracker with deductible and out-of-pocket progress, the HSA target, FSA balance and deadline countdown, expense log, alerts and an `.ics` reminder. A **"Fast-Forward +6 Months"** button advances the demo clock.
+9. **Full report (free):**
    - Cost breakdown per plan: premiums, care, employer HSA, tax savings split into federal, state and FICA.
-   - Three scenarios per plan: no care, expected, worst case.
+   - 4-scenario stress matrix: routine, urgent care / ER, planned surgery and catastrophic years.
    - Breakeven: the level of care at which the other plan becomes cheaper.
    - Warnings: HSA limit, FSA forfeiture, state rules, non-qualified HDHP.
-   - Plain-English summary (LLM, with template fallback).
-7. **Year tracker (paid, retention):** deductible progress, out-of-pocket progress, HSA pacing, FSA balance and deadline countdown, expense log, alerts. A **"Fast-forward +6 months"** button advances the demo clock.
 
 All state is saved to `localStorage` under one key and validated with `RetentionStateSchema` on load.
 
@@ -145,18 +148,28 @@ The employee's own HSA contribution isn't a cost: it stays their money.
 ### 4.4 Tracker
 `computeTrackerSnapshot(state, plan, today)` returns deductible and out-of-pocket progress, HSA remaining to target, FSA balance, FSA dollars at risk after the $700 carryover, days to the FSA deadline, and alerts. `today` is an argument; the fast-forward button only changes `state.demoMonthOffset`.
 
-### 4.5 LLM
+### 4.5 Bill audit
+`auditBill(plan, tier, { billedAmount, ytdPaid, demandedAmount })` checks a clinic's demand against the plan rules:
+```
+dedLeft  = max(0, Deductible − ytdPaid)
+oopLeft  = max(0, OOPMax − ytdPaid)
+Legal    = min(oopLeft, min(Bill, dedLeft) + max(0, Bill − dedLeft) × Coinsurance)
+Verdict  = OVERCHARGE if Demand − Legal > $1, else FAIR
+```
+A single YTD figure counts toward both the deductible and the out-of-pocket maximum. The paywall's example catch runs on Maya's HDHP and is asserted in `sample-bills.test.ts`.
+
+### 4.6 LLM
 One optional server call that rewrites the result as three plain-English bullets. Zod-validated, 4-second timeout, numbers injected from the engine. On any failure the deterministic template renders instead. The product works with no API key.
 
 ---
 
 ## 5. Monetization
 
-- **Free:** calculator, sample personas, own inputs, the winning plan and the dollar gap.
-- **Paid, $39/year (core subscription):** full report, scenarios, breakeven, warnings, summary, year tracker.
-- **Entry offer, $9.50 (single bill audit):** one hospital bill audit plus dispute script; upgrades to the $39/year subscription.
-- **Paywall trigger:** immediately after the user sees the dollar gap.
-- **Checkout:** Stripe Checkout, test mode, test card printed on screen. Success sets `unlocked: true` in saved state.
+- **Free:** calculator, sample personas, own inputs, the winning plan, the dollar gap, the brief, the stakes card and the full report (breakdown, stress matrix, breakeven, warnings).
+- **Paid, $39/year (core subscription, Annual Shield):** unlimited bill audits with dispute scripts, the 26-paycheck setup and the year-round tracker.
+- **Entry offer, $9.50 (Single Bill Audit):** one bill audit plus dispute script; upgrades to the $39/year subscription.
+- **Paywall trigger:** directly below the stakes card, right after the user sees the dollar gap.
+- **Checkout:** Judge Demo Unlock, or Stripe Checkout in test mode when configured, with the test card printed on screen. Success sets `unlocked: true` in saved state.
 - Annual billing matches the annual decision and avoids monthly churn.
 
 ### Unit economics
@@ -177,7 +190,7 @@ The deck may show LTV and CAC only as they appear in `docs/unit-economics.md`, w
 ## 6. Retention loop (must work in the live app)
 
 1. After checkout the user picks the plan they enrolled in; the tracker starts.
-2. Through the year they log bills. The tracker shows deductible progress and the HSA pace.
+2. Through the year they log bills, or log the verified share from a bill audit. The tracker shows deductible and out-of-pocket progress and the HSA target for the year.
 3. From 90 days before the FSA deadline the tracker warns how many dollars will be lost.
 
 **Roadmap (in build, not in the live app):** next open enrollment, last year's logged spending pre-fills "expected care", so the second comparison is better than the first.
